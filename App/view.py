@@ -36,8 +36,10 @@ operación solicitada
 
 def printMenu():
     print("Bienvenido")
-    print("1- Cargar información en el catálogo")
-    print("2- ")
+    print("1- Inicializar analizador")
+    print("2- Cargar información de cables submarinos")
+    print("3- Identificación de clústeres con base en dos landing points")
+    print("4-  ")
 
 catalog = None
 
