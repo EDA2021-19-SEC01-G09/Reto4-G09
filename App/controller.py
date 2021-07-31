@@ -31,8 +31,56 @@ El controlador se encarga de mediar entre la vista y el modelo.
 
 # Inicialización del Catálogo de libros
 
+def init():
+    """
+    Llama la funcion de inicializacion  del modelo.
+    """
+    # analyzer es utilizado para interactuar con el modelo
+    analyzer = model.newAnalyzer()
+    return analyzer
+
 # Funciones para la carga de datos
 
+def loadData(analyzer):
+    loadCountries(analyzer)
+    loadLandings(analyzer)
+    #loadCables(analyzer)
+
+def loadCountries(analyzer):
+    archivo = cf.data_dir + 'countries.csv'
+    input_file = csv.DictReader(open(archivo, encoding='utf-8'), delimiter = ",")
+    
+    for country in input_file:
+        model.addCountry(analyzer, country)
+        model.addStop(analyzer, country['CountryName'])
+
+def loadLandings(analyzer):
+    archivo = cf.data_dir + 'landing_points.csv'
+    input_file = csv.DictReader(open(archivo, encoding='utf-8'), delimiter = ",")
+    
+    for file in input_file:
+        model.addInfoOnLandings(analyzer, file['landing_point_id'], file)
+
+def loadCables(analyzer):
+    """
+    Carga los datos de los archivos CSV en el modelo.
+    Se crea un arco entre cada par de estaciones que
+    pertenecen al mismo servicio y van en el mismo sentido.
+
+    addRouteConnection crea conexiones entre diferentes rutas
+    servidas en una misma estación.
+    """
+    connectionsfile = cf.data_dir + 'connections'
+    input_file = csv.DictReader(open(connectionsfile, encoding="utf-8"),
+                                delimiter=",")
+    lastcable = None
+    for cable in input_file:
+        model.addStopConnection(analyzer, cable)
+        
+    model.addRouteConnections(analyzer)
+    return analyzer
+
+        
 # Funciones de ordenamiento
 
 # Funciones de consulta sobre el catálogo

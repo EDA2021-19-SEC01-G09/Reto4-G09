@@ -25,12 +25,17 @@
  """
 
 
-import config as cf
-from DISClib.ADT import list as lt
-from DISClib.ADT import map as mp
+import config
+from DISClib.ADT.graph import gr
+from DISClib.ADT import map as m
 from DISClib.DataStructures import mapentry as me
-from DISClib.Algorithms.Sorting import shellsort as sa
-assert cf
+from DISClib.ADT import list as lt
+from DISClib.Algorithms.Graphs import scc
+from DISClib.Algorithms.Graphs import dijsktra as djk
+from DISClib.Utils import error as error
+assert config
+import haversine as hs
+
 
 """
 Se define la estructura de un catálogo de videos. El catálogo tendrá dos listas, una para los videos, otra para las categorias de
@@ -39,7 +44,99 @@ los mismos.
 
 # Construccion de modelos
 
+def newAnalyzer():
+    try:
+        analyzer = {
+                    'countries': None,
+                    'landings': None,
+                    'connections': None,
+                    'components': None,
+                    'paths': None
+                    }
+
+        analyzer['countries'] = m.newMap(numelements=2,
+                                    maptype='PROBING')
+
+        analyzer['landings'] = m.newMap(numelements=2,
+                                    maptype='PROBING',
+                                    comparefunction=compareStopIds)
+
+        analyzer['connections'] = gr.newGraph(datastructure='ADJ_LIST',
+                                            directed=True,
+                                            size=300,
+                                            comparefunction=compareStopIds)
+        return analyzer
+    except Exception as exp:
+        error.reraise(exp, 'model:newAnalyzer')
+
+
 # Funciones para agregar informacion al catalogo
+
+def addCountry(analyzer, country):
+    m.put(analyzer['countries'], country['CountryName'], country)
+
+def addStop(analyzer, landingid):
+    """
+    Adiciona un landing como un vertice del grafo
+    """
+    try:
+        if not gr.containsVertex(analyzer['connections'], landingid):
+            gr.insertVertex(analyzer['connections'], landingid)
+        return analyzer
+    except Exception as exp:
+        error.reraise(exp, 'model:addstop')
+
+def addInfoOnLandings(analyzer, paisName, paisInfo, marcador = None):
+    allLandings =  analyzer['landings']
+    existslanding = m.contains(allLandings, paisName)
+    if existslanding:
+        entry = m.get(allLandings, paisName)
+        landing = me.getValue(entry)
+    else:
+        landing = newPais(paisInfo)
+        m.put(allLandings, paisName, landing)
+    if marcador is not None:
+        lt.addLast(landing['cables'], marcador)
+
+def newPais(info):
+    pais = {'info' : None,
+            'cables' : None}
+    pais['info'] = info
+    pais['cables'] = lt.newList("ARRAY_LIST")
+    return pais
+
+def addStopConnection(analyzer, cable):
+    """
+    Adiciona las estaciones al grafo como vertices y arcos entre las
+    estaciones adyacentes.
+
+    Los vertices tienen por nombre el identificador de la estacion
+    seguido de la ruta que sirve.  Por ejemplo:
+
+    75009-10
+
+    Si la estacion sirve otra ruta, se tiene: 75009-101
+    """
+    try:
+        origin = formatVertex(cable)[0]
+        destination = formatVertex(cable)[1]
+        if not gr.containsVertex(analyzer['connections'], origin):
+            addStop(analyzer, origin)
+            pais = me.getValue(analyzer['landings'], m.get(analyzer['landings'], cable['origin']))['info']['name']
+            locCap = m.get(analyzer['countries'], cable)
+
+        if not gr.containsVertex(analyzer['connections'], destination):
+            addStop(analyzer, destination)
+        loc_origin =      
+        distance = 
+        distance = abs(distance)
+        addConnection(analyzer, origin, destination, distance)
+        addRouteStop(analyzer, service)
+        addRouteStop(analyzer, lastservice)
+        return analyzer
+    except Exception as exp:
+        error.reraise(exp, 'model:addStopConnection')
+    
 
 # Funciones para creacion de datos
 
@@ -48,3 +145,26 @@ los mismos.
 # Funciones utilizadas para comparar elementos dentro de una lista
 
 # Funciones de ordenamiento
+
+# Funciones helper
+
+def formatVertex(service):
+    """
+    Se formatea el nombrer del vertice con el id de la estación
+    seguido de la ruta.
+    """
+    name = service['BusStopCode'] + '-'
+    name = name + service['ServiceNo']
+    return name
+
+def compareStopIds(stop, keyvaluestop):
+    """
+    Compara dos estaciones
+    """
+    stopcode = keyvaluestop['key']
+    if (stop == stopcode):
+        return 0
+    elif (stop > stopcode):
+        return 1
+    else:
+        return -1
