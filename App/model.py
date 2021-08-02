@@ -32,10 +32,10 @@ from DISClib.DataStructures import mapentry as me
 from DISClib.ADT import list as lt
 from DISClib.Algorithms.Graphs import scc
 from DISClib.Algorithms.Graphs import dijsktra as djk
+from DISClib.Algorithms.Graphs import prim
 from DISClib.Utils import error as error
 assert config
 import haversine as hs
-
 
 """
 Se define la estructura de un catálogo de videos. El catálogo tendrá dos listas, una para los videos, otra para las categorias de
@@ -208,6 +208,27 @@ def addRouteConnections(analyzer):
 # Funciones de ordenamiento
 
 # Funciones helper
+
+def minimumCostPaths(analyzer, initialStation):
+    """
+    Calcula los caminos de costo mínimo desde la estacion initialStation
+    a todos los demas vertices del grafo
+    """
+    analyzer['paths'] = djk.Dijkstra(analyzer['connections'], initialStation)
+    return analyzer
+
+def minimumCostPath(analyzer, destStation):
+    """
+    Retorna el camino de costo minimo entre la estacion de inicio
+    y la estacion destino
+    Se debe ejecutar primero la funcion minimumCostPaths
+    """
+    path = djk.pathTo(analyzer['paths'], destStation)
+    return path
+
+def MST(analyzer):
+    mst = prim.PrimMST(analyzer['connections'])
+    return mst
 
 def formatVertex(cable):
     """

@@ -84,3 +84,21 @@ def loadCables(analyzer):
 # Funciones de ordenamiento
 
 # Funciones de consulta sobre el catálogo
+
+def minimumCostPaths(analyzer, initialStation):
+    """
+    Calcula todos los caminos de costo minimo de initialStation a todas
+    las otras estaciones del sistema
+    """
+    res = model.minimumCostPaths(analyzer, initialStation)
+    return res
+
+def minimumCostPath(analyzer, destStation):
+    """
+    Retorna el camino de costo minimo desde initialStation a destStation
+    """
+    return model.minimumCostPath(analyzer, destStation)
+
+def MST(analyzer):
+    return model.MST(analyzer)
+    

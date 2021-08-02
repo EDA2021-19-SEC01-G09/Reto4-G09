@@ -22,12 +22,17 @@
 
 import config as cf
 from DISClib.ADT import map as m
+from DISClib.ADT import stack, queue
 import sys
 import controller
 from DISClib.ADT import list as lt
 assert cf
 from DISClib.ADT.graph import gr
+from DISClib.Algorithms.Graphs import scc
+from DISClib.Algorithms.Graphs import prim
 
+default_limit = 1000
+sys.setrecursionlimit(default_limit*100)
 
 """
 La vista se encarga de la interacción con el usuario
@@ -67,6 +72,33 @@ while True:
 
     elif int(inputs[0]) == 2:
         pass
+
+    elif int(inputs[0]) == 3:
+        initialStation =  input("Ingrese el primer país: ")
+        destStation = input("Ingrese el primer país: ")
+
+        res = controller.minimumCostPaths(analyzer, initialStation)
+        path = controller.minimumCostPath(analyzer, destStation)
+        if path is not None:
+            cont = 0
+            print("La ruta es: ")
+            while (not stack.isEmpty(path)):
+                stop = stack.pop(path)
+                cont += stop['weight']
+                print(stop)
+            print("Distancia de la ruta: " + str(cont) + "km")
+
+        else:
+            print('No hay camino')
+
+
+    elif int(inputs[0]) == 4:
+        mst = controller.MST(analyzer)
+        ans = prim.weightMST(analyzer['connections'], mst)
+        print("El costo total de la red de expansión mínima es: " + str(ans) + " km")
+        ans2 = prim.edgesMST(analyzer['connections'], mst)
+        print(ans2)
+        
 
     else:
         sys.exit(0)
