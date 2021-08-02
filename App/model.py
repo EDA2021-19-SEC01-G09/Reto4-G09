@@ -130,6 +130,7 @@ def addStopConnection(analyzer, cable):
             if gr.containsVertex(analyzer['connections'], infoPais[1]):
                 dist = distance2Capital(infoPais[0], getCoord(landing))
                 addConnection(analyzer, origin, infoPais[1], dist)
+                addConnection(analyzer, infoPais[1], origin, dist)
     
     if not gr.containsVertex(analyzer['connections'], destination):
         addStop(analyzer, destination)
@@ -139,6 +140,7 @@ def addStopConnection(analyzer, cable):
             if gr.containsVertex(analyzer['connections'], infoPais[1]):
                 dist = distance2Capital(infoPais[0], getCoord(landing))
                 addConnection(analyzer, destination, infoPais[1], dist)
+                addConnection(analyzer, infoPais[1], destination, dist)
     
     distance = abs(hs.haversine(getCoord(getLanding(analyzer, cable['\ufefforigin'])), getCoord(getLanding(analyzer, cable['destination']))))
     addConnection(analyzer, origin, destination, distance)
