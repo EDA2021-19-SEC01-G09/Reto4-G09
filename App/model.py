@@ -203,6 +203,17 @@ def addRouteConnections(analyzer):
 
 # Funciones de consulta
 
+def requerimiento1(analyzer, landing1, landing2):
+    """
+    Calcula los componentes conectados del grafo
+    Se utiliza el algoritmo de Kosaraju
+    """
+    analyzer['components'] = scc.KosarajuSCC(analyzer['connections'])
+    res1 = scc.connectedComponents(analyzer['components'])
+    res2 = scc.stronglyConnected(analyzer['components'], landing1, landing2)
+
+    return res1, res2
+
 # Funciones utilizadas para comparar elementos dentro de una lista
 
 # Funciones de ordenamiento
