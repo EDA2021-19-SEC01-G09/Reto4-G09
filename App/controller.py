@@ -85,6 +85,12 @@ def loadCables(analyzer):
 
 # Funciones de consulta sobre el catálogo
 
+def requerimiento1(analyzer, landing1, landing2):
+    """
+    Numero de componentes fuertemente conectados
+    """
+    return model.requerimiento1(analyzer, landing1, landing2)
+
 def minimumCostPaths(analyzer, initialStation):
     """
     Calcula todos los caminos de costo minimo de initialStation a todas
@@ -101,4 +107,6 @@ def minimumCostPath(analyzer, destStation):
 
 def MST(analyzer):
     return model.MST(analyzer)
+ 
+
     
