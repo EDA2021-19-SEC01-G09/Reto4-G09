@@ -21,15 +21,12 @@
  """
 
 import config as cf
+from DISClib.ADT import map as m
 import sys
 import controller
 from DISClib.ADT import list as lt
 assert cf
-import haversine as hs
-import threading
-from DISClib.ADT import stack
 from DISClib.ADT.graph import gr
-
 
 
 """
@@ -41,42 +38,36 @@ operación solicitada
 
 def printMenu():
     print("Bienvenido")
-    print("1- Cargar información")
-    print("2- Cargar información de cables submarinos")
-    print("3- Req 1")
-    print("4- Req 2")
-    print("5- Req 3")
+    print("1- Cargar información de cables submarinos")
+    print("2- Req 1")
+    print("3- Req 2")
+    print("4- Req 3")
+    print("5- Req 4")
 
 catalog = None
 
 """
 Menu principal
 """
-def thread_cycle():
-    while True:
-        printMenu()
-        inputs = input('Seleccione una opción para continuar\n>')
-
-        if int(inputs[0]) == 1:
-            print("\nInicializando....")
-            # cont es el controlador que se usará de acá en adelante
-            catalog = controller.iniciar()
-            controller.loadArchivos(catalog)
-            print("Total landing points: " + str(gr.numVertices(catalog['connections'])))
-            print("Total conexiones entre landing points: " + str(gr.numEdges(catalog['connections'])))
-            print("Total paises: " + str(lt.size(catalog['countries'])))
-            
-
-        elif int(inputs[0]) == 2:
-            pass
-
-        else:
-            sys.exit(0)
-    sys.exit(0)
+while True:
+    printMenu()
+    inputs = input('Seleccione una opción para continuar\n')
+    if int(inputs[0]) == 1:
+        print("Cargando información de los archivos ....")
+        analyzer = controller.init()
+        controller.loadData(analyzer)
+        print("El total de landing points del grafo: " + str(gr.numVertices(analyzer['connections'])))
+        primLanding = lt.getElement(m.valueSet(analyzer['landings']), 1)['info']
+        print("El identificador, el nombre, la latitud y la longitud del primer landing point cargado en el mapa es " + str(primLanding['id']) + ", " + str(primLanding['name']) + ", " + str(primLanding['latitude']) + "y " +  str(primLanding['longitude']) + " respectivamente")
+        print("El total de conexiones entre landing points: " + str(gr.numEdges(analyzer['connections'])))
+        print("El numero de países es: " + str(m.size(analyzer['countries'])))
+        ultPais = lt.getElement(m.valueSet(analyzer['countries']), m.size(analyzer['countries']) - 1)
+        print("La población y el número de usuarios del último país cargado en el mapa es de " + ultPais['Population'] + " y " + ultPais['Internet users'] + " personas respectivamente")
 
 
-if __name__ == "__main__":
-    threading.stack_size(67108864)  # 64MB stack
-    sys.setrecursionlimit(2 ** 20)
-    thread = threading.Thread(target=thread_cycle)
-    thread.start()
+    elif int(inputs[0]) == 2:
+        pass
+
+    else:
+        sys.exit(0)
+sys.exit(0)
