@@ -25,16 +25,17 @@
  """
 
 
-import config as cf
-from DISClib.ADT import list as lt
+import config
 from DISClib.ADT.graph import gr
-from DISClib.ADT import map as mp
+from DISClib.ADT import map as m
 from DISClib.DataStructures import mapentry as me
+from DISClib.ADT import list as lt
 from DISClib.Algorithms.Graphs import scc
 from DISClib.Algorithms.Graphs import dijsktra as djk
-from DISClib.Algorithms.Sorting import shellsort as sa
 from DISClib.Utils import error as error
-assert cf
+assert config
+import haversine as hs
+
 
 """
 Se define la estructura de un catálogo de videos. El catálogo tendrá dos listas, una para los videos, otra para las categorias de
@@ -42,135 +43,187 @@ los mismos.
 """
 
 # Construccion de modelos
-def newcatalog():
-    catalog = { 
-                'countries': None,
-                'connections': None,
-                'points': None
-                }
-    catalog['points'] = mp.newMap(numelements=2000,
-                                     maptype='PROBING',
-                                     loadfactor= 0.5,
-                                     comparefunction=compareVerIds)
 
-    catalog['connections'] = gr.newGraph(datastructure='ADJ_LIST',
+def newAnalyzer():
+    try:
+        analyzer = {
+                    'countries': None,
+                    'landings': None,
+                    'connections': None,
+                    'components': None,
+                    'paths': None
+                    }
+
+        analyzer['countries'] = m.newMap(numelements=2,
+                                    maptype='PROBING')
+
+        analyzer['landings'] = m.newMap(numelements=2,
+                                    maptype='PROBING',
+                                    comparefunction=compareStopIds)
+
+        analyzer['connections'] = gr.newGraph(datastructure='ADJ_LIST',
                                             directed=True,
-                                            size=5000,
-                                            comparefunction=compareVerIds)   
+                                            size=300,
+                                            comparefunction=compareStopIds)
+        return analyzer
+    except Exception as exp:
+        error.reraise(exp, 'model:newAnalyzer')
 
-    catalog['countries'] = lt.newList(datastructure='SINGLE_LINKED', cmpfunction = comparePais )    
-
-    return catalog
 
 # Funciones para agregar informacion al catalogo
-def addPoint(catalog, point):
-    point['cables'] = None
-    mp.put(catalog['points'], point['landing_point_id'], point)
 
+def addCountry(analyzer, country):
+    m.put(analyzer['countries'], country['CountryName'], country)
 
-def addPointConne(catalog, coneccion):
+def addStop(analyzer, landingid):
+    """
+    Adiciona un landing como un vertice del grafo
+    """
     try:
-        idorigen = coneccion['origin']
-        idedestino = coneccion['destination']
-        cable = coneccion['cable_id']
-        origen = formatVertex(idorigen, cable)
-        destino = formatVertex(idedestino, cable)
-        if 'n.a.' in coneccion['cable_length']:
-            distancia = 0.1
-        else:
-            distancia = float(coneccion['cable_length'].replace(',','').strip(' km'))
-        addVer(catalog, origen)
-        addVer(catalog, destino)
-        addConne(catalog, origen, destino, distancia)
-        addPointcable(catalog, idorigen,cable)
-        addPointcable(catalog, idedestino,cable)
-        return catalog
+        if not gr.containsVertex(analyzer['connections'], landingid):
+            gr.insertVertex(analyzer['connections'], landingid)
+        return analyzer
     except Exception as exp:
-        error.reraise(exp, 'model:addPointConne')
+        error.reraise(exp, 'model:addstop')
 
+def addInfoOnLandings(analyzer, paisName, paisInfo, marcador = None):
+    allLandings =  analyzer['landings']
+    existslanding = m.contains(allLandings, paisName)
+    if existslanding:
+        entry = m.get(allLandings, paisName)
+        landing = me.getValue(entry)
+    elif paisInfo is not None:
+        landing = newPais(paisInfo)
+        m.put(allLandings, paisName, landing)
+    if marcador is not None:
+        if not lt.isPresent(landing['cables'], marcador):
+            lt.addLast(landing['cables'], marcador)
+
+def newPais(info):
+    pais = {'info' : None,
+            'cables' : None}
+    pais['info'] = info
+    pais['cables'] = lt.newList("ARRAY_LIST")
+    return pais
+
+def addStopConnection(analyzer, cable):
+    """
+    Adiciona las estaciones al grafo como vertices y arcos entre las
+    estaciones adyacentes.
+
+    Los vertices tienen por nombre el identificador de la estacion
+    seguido de la ruta que sirve.  Por ejemplo:
+
+    75009-10
+
+    Si la estacion sirve otra ruta, se tiene: 75009-101
+    """
+    extremos = formatVertex(cable)
+    origin = extremos[0]
+    destination = extremos[1]
+
+    if not gr.containsVertex(analyzer['connections'], origin):
+        addStop(analyzer, origin)
+        landing = getLanding(analyzer, cable['\ufefforigin'])
+        infoPais = countryExists(analyzer, landing)
+        if infoPais is not None:
+            if gr.containsVertex(analyzer['connections'], infoPais[1]):
+                dist = distance2Capital(infoPais[0], getCoord(landing))
+                addConnection(analyzer, origin, infoPais[1], dist)
+    
+    if not gr.containsVertex(analyzer['connections'], destination):
+        addStop(analyzer, destination)
+        landing = getLanding(analyzer, cable['destination'])
+        infoPais = countryExists(analyzer, landing)
+        if infoPais is not None:
+            if gr.containsVertex(analyzer['connections'], infoPais[1]):
+                dist = distance2Capital(infoPais[0], getCoord(landing))
+                addConnection(analyzer, destination, infoPais[1], dist)
+    
+    distance = abs(hs.haversine(getCoord(getLanding(analyzer, cable['\ufefforigin'])), getCoord(getLanding(analyzer, cable['destination']))))
+    addConnection(analyzer, origin, destination, distance)
+    addInfoOnLandings(analyzer, cable['\ufefforigin'], None, cable['cable_id'])
+    addInfoOnLandings(analyzer, cable['destination'], None, cable['cable_id'])
+
+    return analyzer
+    
+def getLanding(analyzer, landingpoint):
+    prelanding =  m.get(analyzer['landings'], landingpoint)
+    landing = me.getValue(prelanding)['info']
+    return landing
+    
+def getCoord(landing):
+    locLanding = (float(landing['latitude']), float(landing['longitude']))
+    return locLanding
+
+def countryExists(analyzer, landing):
+    pais = landing['name'].split(",")[-1].strip(" ")
+    preInfoPais = m.get(analyzer['countries'], pais)
+    if preInfoPais:
+        return preInfoPais, pais
+    else:
+        return None
+
+def distance2Capital(preInfoPais, coordPais):
+    infoPais = me.getValue(preInfoPais)
+    locPais = (float(infoPais['CapitalLatitude']), float(infoPais['CapitalLongitude']))
+    disHav = hs.haversine(coordPais, locPais)
+    return abs(disHav)
+
+def addConnection(analyzer, origin, destination, distance):
+    """
+    Adiciona un cable entre dos landing points
+    """
+    edge = gr.getEdge(analyzer['connections'], origin, destination)
+    if edge is None:
+        gr.addEdge(analyzer['connections'], origin, destination, distance)
+    return analyzer
+    
+def addRouteConnections(analyzer):
+    """
+    Por cada vertice (cada estacion) se recorre la lista
+    de rutas servidas en dicha estación y se crean
+    arcos entre ellas para representar el cambio de ruta
+    que se puede realizar en una estación.
+    """
+    lststops = m.keySet(analyzer['landings'])
+    for key in lt.iterator(lststops):
+        lstroutes = me.getValue(m.get(analyzer['landings'], key))['cables']
+        prevrout = None
+        for route in lt.iterator(lstroutes):
+            route = key + '-' + route
+            if prevrout is not None:
+                addConnection(analyzer, prevrout, route, 0.1)
+                addConnection(analyzer, route, prevrout, 0.1)
+            prevrout = route
 
 # Funciones para creacion de datos
-def addVer(catalog, pointid):
-    try:
-        if not gr.containsVertex(catalog['connections'], pointid):
-            gr.insertVertex(catalog['connections'], pointid)
-        return catalog
-    except Exception as exp:
-        error.reraise(exp, 'model:addVer')
-
-
-def addConne(catalog, origen, destino, distancia):
-    edge = gr.getEdge(catalog['connections'], origen, destino)
-    if edge is None:
-        gr.addEdge(catalog['connections'], origen, destino, distancia)
-    return catalog
-
-
-def addPointcable(catalog, pointid, cable):
-    dato = mp.get(catalog['points'], pointid)
-    if dato['value']['cables'] is None:
-        ltcables = lt.newList(cmpfunction=comparecables)
-        lt.addLast(ltcables, cable)
-        dato['value']['cables'] = ltcables
-    else:
-        if not lt.isPresent(dato['value']['cables'], cable):
-            lt.addLast(dato['value']['cables'], cable)
-    return catalog
-
-def addCountry(catalog, country):
-    lt.addLast(catalog['countries'], country)
 
 # Funciones de consulta
 
 # Funciones utilizadas para comparar elementos dentro de una lista
 
 # Funciones de ordenamiento
-def compareIds(id1, id2):
-    if (id1 == id2):
-        return 0
-    elif id1 > id2:
-        return 1
-    else:
-        return -1
 
-def compareVerIds(ver, keyvaluever):
+# Funciones helper
+
+def formatVertex(cable):
+    """
+    Se formatea el nombrer del vertice con el id de la estación
+    seguido de la ruta.
+    """
+    origen = str(cable['\ufefforigin']) + '-' + cable['cable_id']
+    destino = str(cable['destination']) + '-' + cable['cable_id']
+    return (origen, destino)
+
+def compareStopIds(stop, keyvaluestop):
     """
     Compara dos estaciones
     """
-    code = keyvaluever['key']
-    if (ver == code):
+    stopcode = keyvaluestop['key']
+    if (stop == stopcode):
         return 0
-    elif (ver > code):
-        return 1
-    else:
-        return -1
-
-def comparecables(cable1, cable2):
-
-    if (cable1 == cable2):
-        return 0
-    elif (cable1 > cable2):
-        return 1
-    else:
-        return -1
-
-def comparePais(pais1, pais2):
-    if (pais1['CountryName'] == pais2['CountryName']):
-        return 0
-    elif (pais1['CountryName'] > pais2['CountryName']):
-        return 1
-    else:
-        return -1
-def formatVertex(point, cable):
-
-    name = point + '-' + cable
-    return name
-
-def comparepoints(id, entry):
-    identry = me.getKey(entry)
-    if (id == identry):
-        return 0
-    elif (id > identry):
+    elif (stop > stopcode):
         return 1
     else:
         return -1
