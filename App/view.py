@@ -71,7 +71,18 @@ while True:
 
 
     elif int(inputs[0]) == 2:
-        pass
+        landing1 = input('Ingrese prime landing point: ')
+        landing2 = input('Ingrese segundo landing point: ')
+        if gr.containsVertex(analyzer['connections'], landing1) and gr.containsVertex(analyzer['connections'], landing2) == True:
+            respuesta = controller.requerimiento1(analyzer, landing1, landing2)
+            print('El número de componentes conectados es: ' + str(respuesta[0]))
+            if respuesta[1] == True:
+                print('Los dos landing points dados están en el mismo cluster')
+            else:
+                print('Los dos landing points dados no están en el mismo cluster')
+        
+        else:
+            print('Alguno de los landing points dados no existe, por favor ingresar otro')
 
     elif int(inputs[0]) == 3:
         initialStation =  input("Ingrese el primer país: ")
