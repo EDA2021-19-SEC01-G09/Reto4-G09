@@ -47,7 +47,6 @@ def printMenu():
     print("2- Req 1")
     print("3- Req 2")
     print("4- Req 3")
-    print("5- Req 4")
 
 catalog = None
 
@@ -60,7 +59,7 @@ while True:
     if int(inputs[0]) == 1:
         print("Cargando información de los archivos ....")
         analyzer = controller.init()
-        controller.loadData(analyzer)
+        tupla = controller.loadData(analyzer)
         print("El total de landing points del grafo: " + str(gr.numVertices(analyzer['connections'])))
         primLanding = lt.getElement(m.valueSet(analyzer['landings']), 1)['info']
         print("El identificador, el nombre, la latitud y la longitud del primer landing point cargado en el mapa es " + str(primLanding['id']) + ", " + str(primLanding['name']) + ", " + str(primLanding['latitude']) + "y " +  str(primLanding['longitude']) + " respectivamente")
@@ -68,18 +67,24 @@ while True:
         print("El numero de países es: " + str(m.size(analyzer['countries'])))
         ultPais = lt.getElement(m.valueSet(analyzer['countries']), m.size(analyzer['countries']) - 1)
         print("La población y el número de usuarios del último país cargado en el mapa es de " + ultPais['Population'] + " y " + ultPais['Internet users'] + " personas respectivamente")
+        print("Tiempo [ms]: ", f"{tupla[0]:.3f}", "  ||  ",
+                            "Memoria [kB]: ", f"{tupla[1]:.3f}")
 
 
     elif int(inputs[0]) == 2:
         landing1 = input('Ingrese prime landing point: ')
         landing2 = input('Ingrese segundo landing point: ')
         if gr.containsVertex(analyzer['connections'], landing1) and gr.containsVertex(analyzer['connections'], landing2) == True:
-            respuesta = controller.requerimiento1(analyzer, landing1, landing2)
+            tupla = controller.requerimiento1(analyzer, landing1, landing2)
+            respuesta = tupla[0]
             print('El número de componentes conectados es: ' + str(respuesta[0]))
             if respuesta[1] == True:
                 print('Los dos landing points dados están en el mismo cluster')
             else:
                 print('Los dos landing points dados no están en el mismo cluster')
+            
+            print("Tiempo [ms]: ", f"{tupla[1]:.3f}", "  ||  ",
+                            "Memoria [kB]: ", f"{tupla[2]:.3f}")
         
         else:
             print('Alguno de los landing points dados no existe, por favor ingresar otro')
@@ -88,8 +93,8 @@ while True:
         initialStation =  input("Ingrese el primer país: ")
         destStation = input("Ingrese el primer país: ")
 
-        res = controller.minimumCostPaths(analyzer, initialStation)
-        path = controller.minimumCostPath(analyzer, destStation)
+        tupla = controller.minimumCostPaths(analyzer, initialStation, destStation)
+        path = tupla[0]
         if path is not None:
             cont = 0
             print("La ruta es: ")
@@ -102,13 +107,24 @@ while True:
         else:
             print('No hay camino')
 
+        print("Tiempo [ms]: ", f"{tupla[1]:.3f}", "  ||  ",
+                            "Memoria [kB]: ", f"{tupla[2]:.3f}")
+        
+
 
     elif int(inputs[0]) == 4:
-        mst = controller.MST(analyzer)
-        ans = prim.weightMST(analyzer['connections'], mst)
-        print("El costo total de la red de expansión mínima es: " + str(ans) + " km")
-        ans2 = prim.edgesMST(analyzer['connections'], mst)
-        print(ans2)
+        respuesta = (controller.MST(analyzer))
+        print("El costo total de la red de expansión mínima es: " + str((respuesta[0])[1]) + " km")
+        print('El numero de nodos conectados es de: ' + str((respuesta[0])[0]))
+        for i in lt.iterator((respuesta[0])[2]):
+            print(i)
+
+        print("Tiempo [ms]: ", f"{respuesta[1]:.3f}", "  ||  ",
+                            "Memoria [kB]: ", f"{respuesta[2]:.3f}")
+        
+    
+
+
         
 
     else:

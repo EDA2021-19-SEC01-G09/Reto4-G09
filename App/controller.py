@@ -23,6 +23,8 @@
 import config as cf
 import model
 import csv
+import time
+import tracemalloc
 
 
 """
@@ -42,9 +44,25 @@ def init():
 # Funciones para la carga de datos
 
 def loadData(analyzer):
+    delta_time = -1.0
+    delta_memory = -1.0
+
+    tracemalloc.start()
+    start_time = getTime()
+    start_memory = getMemory()
+
     loadCountries(analyzer)
     loadLandings(analyzer)
     loadCables(analyzer)
+
+    stop_memory = getMemory()
+    stop_time = getTime()
+    tracemalloc.stop()
+
+    delta_time = stop_time - start_time
+    delta_memory = deltaMemory(start_memory, stop_memory)
+
+    return delta_time, delta_memory
 
 def loadCountries(analyzer):
     archivo = cf.data_dir + 'countries.csv'
@@ -89,25 +107,100 @@ def requerimiento1(analyzer, landing1, landing2):
     """
     Numero de componentes fuertemente conectados
     """
-    return model.requerimiento1(analyzer, landing1, landing2)
+    delta_time = -1.0
+    delta_memory = -1.0
 
-def minimumCostPaths(analyzer, initialStation):
+    tracemalloc.start()
+    start_time = getTime()
+    start_memory = getMemory()
+
+    answer = model.requerimiento1(analyzer, landing1, landing2)
+
+    stop_memory = getMemory()
+    stop_time = getTime()
+    tracemalloc.stop()
+
+    delta_time = stop_time - start_time
+    delta_memory = deltaMemory(start_memory, stop_memory)
+
+    return answer, delta_time, delta_memory
+    
+
+def minimumCostPaths(analyzer, initialStation, destStation):
     """
     Calcula todos los caminos de costo minimo de initialStation a todas
     las otras estaciones del sistema
     """
-    res = model.minimumCostPaths(analyzer, initialStation)
-    return res
+    delta_time = -1.0
+    delta_memory = -1.0
 
-def minimumCostPath(analyzer, destStation):
-    """
-    Retorna el camino de costo minimo desde initialStation a destStation
-    """
-    return model.minimumCostPath(analyzer, destStation)
+    tracemalloc.start()
+    start_time = getTime()
+    start_memory = getMemory()
+
+    answer = model.minimumCostPaths(analyzer, initialStation, destStation)
+
+    stop_memory = getMemory()
+    stop_time = getTime()
+    tracemalloc.stop()
+
+    delta_time = stop_time - start_time
+    delta_memory = deltaMemory(start_memory, stop_memory)
+
+    return answer, delta_time, delta_memory
 
 def MST(analyzer):
-    return model.MST(analyzer)
+
+    delta_time = -1.0
+    delta_memory = -1.0
+
+    tracemalloc.start()
+    start_time = getTime()
+    start_memory = getMemory()
+
+    answer = model.MST(analyzer)
+
+    stop_memory = getMemory()
+    stop_time = getTime()
+    tracemalloc.stop()
+
+    delta_time = stop_time - start_time
+    delta_memory = deltaMemory(start_memory, stop_memory)
+
+
+    return answer, delta_time, delta_memory
+
+
+def requerimiento4(analyzer):
+    return model.requerimiento4(analyzer)
  
 
     
-#
+def getTime():
+    """
+    devuelve el instante tiempo de procesamiento en milisegundos
+    """
+    return float(time.perf_counter()*1000)
+
+
+def getMemory():
+    """
+    toma una muestra de la memoria alocada en instante de tiempo
+    """
+    return tracemalloc.take_snapshot()
+
+
+def deltaMemory(start_memory, stop_memory):
+    """
+    calcula la diferencia en memoria alocada del programa entre dos
+    instantes de tiempo y devuelve el resultado en bytes (ej.: 2100.0 B)
+    """
+    memory_diff = stop_memory.compare_to(start_memory, "filename")
+    delta_memory = 0.0
+
+    # suma de las diferencias en uso de memoria
+    for stat in memory_diff:
+        delta_memory = delta_memory + stat.size_diff
+    # de Byte -> kByte
+    delta_memory = delta_memory/1024.0
+    return delta_memory

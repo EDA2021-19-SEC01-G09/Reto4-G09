@@ -51,7 +51,8 @@ def newAnalyzer():
                     'landings': None,
                     'connections': None,
                     'components': None,
-                    'paths': None
+                    'paths': None,
+                    'mst': None
                     }
 
         analyzer['countries'] = m.newMap(numelements=2,
@@ -65,6 +66,11 @@ def newAnalyzer():
                                             directed=True,
                                             size=300,
                                             comparefunction=compareStopIds)
+        analyzer['mst'] = gr.newGraph(datastructure='ADJ_LIST',
+                                            directed=True,
+                                            size=5000,
+                                            comparefunction=compareStopIds)
+
         return analyzer
     except Exception as exp:
         error.reraise(exp, 'model:newAnalyzer')
@@ -220,26 +226,45 @@ def requerimiento1(analyzer, landing1, landing2):
 
 # Funciones helper
 
-def minimumCostPaths(analyzer, initialStation):
+def minimumCostPaths(analyzer, initialStation, destStation):
     """
     Calcula los caminos de costo mínimo desde la estacion initialStation
     a todos los demas vertices del grafo
     """
     analyzer['paths'] = djk.Dijkstra(analyzer['connections'], initialStation)
-    return analyzer
-
-def minimumCostPath(analyzer, destStation):
-    """
-    Retorna el camino de costo minimo entre la estacion de inicio
-    y la estacion destino
-    Se debe ejecutar primero la funcion minimumCostPaths
-    """
     path = djk.pathTo(analyzer['paths'], destStation)
     return path
 
+
 def MST(analyzer):
     mst = prim.PrimMST(analyzer['connections'])
-    return mst
+
+    peso = prim.weightMST(analyzer['connections'], mst)
+    mst = (prim.edgesMST(analyzer['connections'], mst))['mst']
+
+    for i in lt.iterator(mst):
+        addPointConneMst(analyzer, i['vertexA'], i['vertexB'], i['weight'])
+    
+
+    mstAnalyzer = analyzer['mst']
+    vert = gr.vertices(mstAnalyzer)
+    num = lt.size(vert)
+    primero = lt.firstElement(vert)
+    mayor = 0
+    camino = None
+    dijta = djk.Dijkstra(analyzer['mst'], primero)
+    listaFuncional = lt.newList('ARRAY_LIST')
+
+    for v in lt.iterator(vert):
+        if djk.hasPathTo(dijta, v) == True:
+            ruta = djk.pathTo(dijta, v)
+            x = lt.size(ruta)
+            if x > mayor:
+                mayor = x
+                camino = ruta
+
+    return num, peso, camino
+
 
 def formatVertex(cable):
     """
@@ -261,3 +286,30 @@ def compareStopIds(stop, keyvaluestop):
         return 1
     else:
         return -1
+
+def addVerMst(catalog, pointid):
+    try:
+        if not gr.containsVertex(catalog['mst'], pointid):
+            gr.insertVertex(catalog['mst'], pointid)
+        return catalog
+    except Exception as exp:
+        error.reraise(exp, 'model:addVerMst')
+
+def addConneMst(catalog, origen, destino, distancia):
+    edge = gr.getEdge(catalog['mst'], origen, destino)
+    if edge is None:
+        gr.addEdge(catalog['mst'], origen, destino, distancia)
+    return catalog
+
+def addPointConneMst(catalog, ver1, ver2, distancia):
+    try:
+        origen = ver1
+        destino = ver2
+        addVerMst(catalog, origen)
+        addVerMst(catalog, destino)
+        addConneMst(catalog, origen, destino, distancia)
+        addConneMst(catalog, destino, origen, distancia)
+        return catalog
+    except Exception as exp:
+        error.reraise(exp, 'model:addPointConneMst')
+
